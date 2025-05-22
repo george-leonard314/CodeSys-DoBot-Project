@@ -1,0 +1,8 @@
+Router IP:          192.168.0.252
+NodeRed IP:         192.168.0.5:1880
+NodeRed UI IP:      192.168.0.5:1880/ui
+Local NodeRed Ip:   192.168.0.25:1880
+
+Self-hosted NodeRed:
+    user:   robot
+    passwd: Sarmale.1808

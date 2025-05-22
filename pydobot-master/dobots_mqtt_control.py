@@ -1,0 +1,117 @@
+import paho.mqtt.client as mqtt
+import time
+from datetime import datetime
+from serial.tools import list_ports
+import pydobot
+import threading
+
+# DOBOT Configurations
+available_ports = list_ports.comports()
+print(f'Available ports: {[x.device for x in available_ports]}')
+
+# Global state management
+is_moving = False
+stop_event = threading.Event()
+lock = threading.Lock()
+
+def control_dobot(port):
+    global is_moving
+    try:
+        device = pydobot.Dobot(port=port, verbose=True)
+        (x, y, z, r, j1, j2, j3, j4) = device.pose()
+        print(f'{port} -> x:{x} y:{y} z:{z} j1:{j1} j2:{j2} j3:{j3} j4:{j4}')
+        
+        for i in range(10):
+            if stop_event.is_set():
+                break
+                
+            # Move sequence
+            device.move_to(x, y - 50, z + 50, r, wait=True)
+            time.sleep(0.5)
+            if stop_event.is_set():
+                break
+                
+            device.move_to(x, y + 75, z - 50, r, wait=True)
+            time.sleep(0.5)
+            
+        # Return to start position if not stopped
+        if not stop_event.is_set():
+            device.move_to(x, y, z, r, wait=True)
+            
+    finally:
+        device.close()
+        with lock:
+            global is_moving
+            is_moving = False
+            stop_event.clear()
+
+# MQTT Configuration
+BROKER_IP = "192.168.0.25"
+PORT = 1883
+TOPIC = "robots/start"
+USERNAME = "robot"
+PASSWORD = "Sarmale.1808"
+CLIENT_ID = f"robot-client-{time.time()}"
+
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        print(f"[{datetime.now()}] Connected to {BROKER_IP}")
+        client.subscribe(TOPIC)
+        print(f"[{datetime.now()}] Subscribed to {TOPIC}")
+    else:
+        error_messages = {
+            1: "Incorrect protocol version",
+            2: "Invalid client identifier",
+            3: "Server unavailable",
+            4: "Bad username/password",
+            5: "Not authorized"
+        }
+        print(f"[{datetime.now()}] Connection failed: {error_messages.get(rc, f'Unknown error {rc}')}")
+
+def on_message(client, userdata, msg):
+    global is_moving, stop_event
+    payload = msg.payload.decode().lower()
+    print(f"\n[{datetime.now()}] Message received: {payload}")
+    
+    if payload == "true":
+        with lock:
+            if not is_moving:
+                is_moving = True
+                stop_event.clear()
+                thread1 = threading.Thread(target=control_dobot, args=('/dev/ttyACM0',))
+                thread2 = threading.Thread(target=control_dobot, args=('/dev/ttyACM1',))
+                thread1.start()
+                thread2.start()
+                print("Starting robot sequence")
+            else:
+                print("Robots are already busy - ignoring start command")
+    elif payload == "false":
+        if is_moving:
+            print("Stopping robots")
+            stop_event.set()
+        else:
+            print("Robots not moving - ignoring stop command")
+
+def main():
+    client = mqtt.Client(client_id=CLIENT_ID)
+    client.username_pw_set(USERNAME, PASSWORD)
+    client.on_connect = on_connect
+    client.on_message = on_message
+
+    print(f"[{datetime.now()}] Connecting to {BROKER_IP}...")
+    
+    try:
+        client.connect(BROKER_IP, PORT, 60)
+        client.loop_forever()
+    except Exception as e:
+        print(f"[{datetime.now()}] Connection error: {str(e)}")
+        print("Retrying in 5 seconds...")
+        time.sleep(5)
+        main()
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nListener stopped")
+        stop_event.set()
