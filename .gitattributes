@@ -1,1 +1,2 @@
 *.projectarchive filter=lfs diff=lfs merge=lfs -text
+CodeSys[[:space:]]Implementation/CameraStreamDoBotV1.projectarchive filter=lfs diff=lfs merge=lfs -text
