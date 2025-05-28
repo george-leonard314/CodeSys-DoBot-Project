@@ -1,0 +1,23 @@
+Install control for raspberry pi
+Login
+Update
+Linux Gateway
+install mjpeg streamer 
+
+
+./mjpg_streamer -i "./input_uvc.so -d /dev/video0 -r 640x480 -f 15"                 -o "./output_http.so -w ./www"
+
+git clone https://github.com/jacksonliam/mjpg-streamer.git
+make
+
+
+install ffmpeg
+
+Library
+
+
+create video.htm, upload it
+
+Future, create API Keys
+
+Modify the ip
