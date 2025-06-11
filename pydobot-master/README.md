@@ -1,71 +1,155 @@
-[![CircleCI](https://circleci.com/gh/luismesas/pydobot.svg?style=svg)](https://circleci.com/gh/luismesas/pydobot)
+# Dobot Magician Python Automation Project
 
-Python library for Dobot Magician
-===
+This project demonstrates how to control a Dobot Magician robotic arm using Python, including moving the arm, operating a conveyor belt, and using the IR sensor for object detection. The code is organized into several scripts for different tasks.
 
-Based on Communication Protocol V1.1.4 (_latest version [here](https://www.dobot.cc/downloadcenter.html?sub_cat=72#sub-download)_)
-
-
-Installation
 ---
 
-Install driver from https://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers.
+## Table of Contents
+- [Project Structure](#project-structure)
+- [Requirements](#requirements)
+- [Setup](#setup)
+- [How It Works](#how-it-works)
+  - [1. Dobot Control (`nfc_pickup.py`)](#1-dobot-control-nfc_pickuppy)
+  - [2. Conveyor Belt and IR Sensor (`belt.py`)](#2-conveyor-belt-and-ir-sensor-beltpy)
+  - [3. Dobot Library (`pydobotplus/dobotplus.py`)](#3-dobot-library-pydobotplusdobotpluspy)
+- [Running the Project](#running-the-project)
+- [Troubleshooting](#troubleshooting)
+- [Notes](#notes)
 
-```
-pip install pydobot
-```
-
-Example
 ---
 
-```python
-from serial.tools import list_ports
+## Project Structure
 
-import pydobot
-
-available_ports = list_ports.comports()
-print(f'available ports: {[x.device for x in available_ports]}')
-port = available_ports[0].device
-
-device = pydobot.Dobot(port=port, verbose=True)
-
-(x, y, z, r, j1, j2, j3, j4) = device.pose()
-print(f'x:{x} y:{y} z:{z} j1:{j1} j2:{j2} j3:{j3} j4:{j4}')
-
-device.move_to(x + 20, y, z, r, wait=False)
-device.move_to(x, y, z, r, wait=True)  # we wait until this movement is done before continuing
-
-device.close()
+```
+CodeSys-DoBot-Project/
+├── pydobotplus/
+│   └── dobotplus.py      # Main Dobot control library
+├── pydobot-master/
+│   ├── nfc_pickup.py     # Example: pick and place with Dobot
+│   ├── belt.py           # Example: conveyor belt with IR sensor
+│   └── test.py           # Example: basic Dobot test
+└── .venv/                # Python virtual environment (recommended)
 ```
 
-Methods
 ---
 
-* **Dobot(port, verbose=False)** Creates an instance of dobot connected to given serial port.
-    * **port**: _string_ with name of serial port to connect
-    * **verbose**: _bool_ will print to console all serial comms
+## Requirements
 
-* **.pose()** Returns the current pose of dobot, as a tuple (x, y, z, r, j1, j2, j3, j4)
-    * **x**: _float_ current x cartesian coordinate
-    * **y**: _float_ current y cartesian coordinate
-    * **z**: _float_ current z cartesian coordinate
-    * **r**: _float_ current effector rotation
-    * **j1**: _float_ current joint 1 angle
-    * **j2**: _float_ current joint 2 angle
-    * **j3**: _float_ current joint 3 angle
-    * **j4**: _float_ current joint 4 angle
-* **.move_to(x, y, z, r, wait=False)** queues a translation in dobot to given coordinates
-    * **x**: _float_ x cartesian coordinate to move
-    * **y**: _float_ y cartesian coordinate to move
-    * **z**: _float_ z cartesian coordinate to move
-    * **r**: _float_ r effector rotation
-    * **wait**: _bool_ waits until command has been executed to return to process
-* **.speed(velocity, acceleration)** changes velocity and acceleration at which the dobot moves to future coordinates
-    * **velocity**: _float_ desired translation velocity
-    * **acceleration**: _float_ desired translation acceleration
-* **.suck(enable)**
-    * **enable**: _bool_ enables/disables suction
-* **.grip(enable)**
-    * **enable**: _bool_ enables/disables gripper
-* **.wait(ms)** adds a waiting period to the internal queue of messages
-    * **ms**: _int_ number of milliseconds to wait
+- **Hardware:**
+  - Dobot Magician robotic arm
+  - Conveyor belt accessory
+  - IR sensor (connected to GP4 port)
+- **Software:**
+  - Python 3.7+
+  - `pyserial` library
+  - Dobot connected via USB (e.g., `/dev/ttyACM0` or `/dev/ttyACM1`)
+
+---
+
+## Setup
+
+1. **Clone or copy the project files to your Raspberry Pi or Linux machine.**
+
+2. **(Recommended) Create a virtual environment:**
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pip install pyserial pydobotplus
+   ```
+
+4. **Connect your Dobot Magician and accessories (conveyor, IR sensor) as per the hardware manual.**
+
+---
+
+## How It Works
+
+### 1. Dobot Control (`nfc_pickup.py`)
+
+- **Purpose:**
+  Moves the Dobot arm through a sequence of positions to pick up an NFC tag and place it on the conveyor belt. - The main program that all the parts should be merged into
+- **Key Steps:**
+  - Connects to the Dobot on `/dev/ttyACM0`.
+  - Moves to initial, middle, and tag positions.
+  - Activates the suction cup to pick up the tag.
+  - Moves to the belt and releases the tag.
+- **Usage:**
+  The main function is `move_nfc_on_belt()`. It is run in a thread at the end of the script.
+
+### 2. Conveyor Belt and IR Sensor (`belt.py`)
+
+- **Purpose:**
+  Controls the conveyor belt and uses the IR sensor to detect objects. - DEVELOPMENT
+- **Key Steps:**
+  - Connects to the Dobot on `/dev/ttyACM1`.
+  - Enables the IR sensor on GP4.
+  - Starts the conveyor belt.
+  - Reads the IR sensor state.
+- **Usage:**
+  Run `python3 pydobot-master/belt.py` to execute. The script logs available ports, sensor state, and other info.
+
+### 3. Dobot Library (`pydobotplus/dobotplus.py`)
+
+- **Purpose:**
+  Provides all the low-level functions to control the Dobot, including movement, IO, conveyor, and sensors.
+- **Key Features:**
+  - Serial communication with Dobot.
+  - Functions for moving the arm, controlling the end effector, and reading sensors.
+  - IR sensor support via `set_ir()` and `get_ir()`.
+
+---
+
+## Running the Project
+
+1. **Connect the Dobot and accessories.**
+2. **Check which serial ports your Dobot appears on:**
+   ```bash
+   python3 -c "from serial.tools import list_ports; print([p.device for p in list_ports.comports()])"
+   ```
+   Update the `PORT` variable in the scripts if needed.
+
+3. **Run the Dobot pick-and-place script:**
+   ```bash
+   python3 pydobot-master/nfc_pickup.py
+   ```
+   This will move the arm and operate the suction cup as described.
+
+4. **Run the conveyor and IR sensor script:**
+   ```bash
+   python3 pydobot-master/belt.py
+   ```
+   This will start the conveyor and print the IR sensor state.
+
+---
+
+## Troubleshooting
+
+- **IR sensor always returns `True`:**
+  - The sensor reading may need adjustment in `pydobotplus/dobotplus.py`. Print the raw sensor value and check your wiring.
+  - Try changing the unpacking in `get_ir()` from `'?'` to `'B'` and see what value is returned.
+
+- **Serial port not found:**
+  - Make sure the Dobot is connected and powered on.
+  - Use `ls /dev/ttyACM*` to see available ports.
+
+- **Permission denied on serial port:**
+  - Add your user to the `dialout` group or run with `sudo`.
+
+---
+
+## Notes
+
+- **Threading:**
+  The scripts use Python threads to allow for multiple operations or multiple Dobots. Adjust as needed for your setup.
+- **Safety:**
+  Always ensure the Dobot's workspace is clear before running scripts.
+- **Customization:**
+  You can modify the positions and sequences in the scripts to fit your application.
+
+---
+
+**Enjoy automating with Dobot Magician!**
+For further customization, refer to the code and comments in `pydobotplus/dobotplus.py`.
