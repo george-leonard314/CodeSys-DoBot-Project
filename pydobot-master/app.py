@@ -107,4 +107,4 @@ def stop():
 if __name__ == '__main__':
     # Note: On Linux you must protect the entry‐point for multiprocessing
     multiprocessing.freeze_support()
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000)
